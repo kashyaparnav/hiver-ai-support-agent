@@ -1,0 +1,34 @@
+# Virtual environment
+.venv/
+venv/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# Generated data
+data/processed/
+data/golden/
+
+# Large raw dataset
+data/raw/*.csv
+data/raw/*.zip
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
