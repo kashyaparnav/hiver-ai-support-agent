@@ -22,7 +22,10 @@ sys.path.insert(0, str(SRC_DIR))
 
 from intents.classifier import IntentClassifier
 from retrieval.retriever import SupportRetriever
-from escalation import EscalationManager
+try:
+    from .escalation import EscalationManager
+except ImportError:
+    from escalation import EscalationManager
 
 
 # ---------------------------------------------------------

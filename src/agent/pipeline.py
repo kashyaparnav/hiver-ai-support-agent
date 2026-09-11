@@ -96,12 +96,11 @@ class SupportPipeline:
         # Step 2: Retrieve examples
         # -----------------------------
 
-        retrieved = (
-            self.retriever.retrieve(
-                message,
-                top_k=top_k
-            )
-        )
+        retrieved = self.retriever.retrieve(
+           message,
+           top_k=top_k,
+           intent=intent
+       )
 
         # -----------------------------
         # Step 3: Build result
