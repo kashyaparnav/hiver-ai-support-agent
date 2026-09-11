@@ -110,6 +110,7 @@ Human Escalation
 
 Reason:
 Sensitive issue detected: hacked
+
 📊 Evaluation
 Intent Classification
 
@@ -268,6 +269,7 @@ Run retrieval/evaluation pipeline
 python src/evaluation/evaluate.py
 Run the support agent directly
 python src/agent/agent.py
+
 🛠️ Tech Stack
 Category	Technology
 Language	Python
@@ -279,6 +281,7 @@ UI	Streamlit
 Data Processing	Pandas, NumPy
 Environment	python-dotenv
 Version Control	Git + GitHub
+
 ⚠️ Limitations
 
 The current implementation has several limitations:
@@ -289,8 +292,8 @@ The local retrieval index is limited to 10,000 conversations.
 Historical support responses may contain outdated information or links.
 The agent does not directly access real order, payment, shipping, or customer-account systems.
 Therefore, it cannot independently verify real-time order or refund information.
-🔮 Future Improvements
 
+🔮 Future Improvements
 Possible next improvements include:
 
 Semantic embedding-based retrieval
@@ -303,8 +306,8 @@ Real order/shipping/payment integrations
 Conversation memory
 Production monitoring
 Human feedback loop
-📌 Conclusion
 
+📌 Conclusion
 This project demonstrates a practical customer-support architecture combining classical machine learning, information retrieval, generative AI, and human escalation.
 
 The system achieves 94.39% intent classification accuracy and 94.46% Macro F1 on the current weakly supervised evaluation set while providing an end-to-end interactive support experience through Streamlit.
