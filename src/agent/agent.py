@@ -1,10 +1,8 @@
-import sys
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
-from google import genai
-
 
 # ---------------------------------------------------------
 # Project paths
@@ -12,9 +10,13 @@ from google import genai
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = PROJECT_ROOT / "src"
+AGENT_DIR = PROJECT_ROOT / "src" / "agent"
 
 sys.path.insert(0, str(SRC_DIR))
+sys.path.insert(0, str(AGENT_DIR))
 
+# Load .env
+load_dotenv(PROJECT_ROOT / ".env")
 
 # ---------------------------------------------------------
 # Internal imports
@@ -22,50 +24,17 @@ sys.path.insert(0, str(SRC_DIR))
 
 from intents.classifier import IntentClassifier
 from retrieval.retriever import SupportRetriever
-try:
-    from .escalation import EscalationManager
-except ImportError:
-    from escalation import EscalationManager
+from escalation import EscalationManager
 
+# Gemini
+from google import genai
 
-# ---------------------------------------------------------
-# Support Agent
-# ---------------------------------------------------------
 
 class SupportAgent:
 
     def __init__(self):
 
         print("Initializing Support Agent...")
-
-        # -------------------------------------------------
-        # Load environment variables
-        # -------------------------------------------------
-
-        load_dotenv()
-
-        # -------------------------------------------------
-        # Gemini client
-        # -------------------------------------------------
-
-        gemini_api_key = os.getenv("GEMINI_API_KEY")
-
-        if not gemini_api_key:
-            raise ValueError(
-                "GEMINI_API_KEY not found. "
-                "Please add it to your .env file."
-            )
-
-        self.client = genai.Client(
-            api_key=gemini_api_key
-        )
-
-        self.model = os.getenv(
-            "GEMINI_MODEL",
-            "gemini-3.5-flash-lite"
-        )
-
-        print("✓ Gemini client loaded")
 
         # -------------------------------------------------
         # Intent classifier
@@ -77,7 +46,7 @@ class SupportAgent:
         print("✓ Intent classifier loaded")
 
         # -------------------------------------------------
-        # Retriever
+        # Historical retriever
         # -------------------------------------------------
 
         self.retriever = SupportRetriever(
@@ -92,12 +61,31 @@ class SupportAgent:
         # Escalation manager
         # -------------------------------------------------
 
-        self.escalation = EscalationManager(
-            confidence_threshold=0.65
+        self.escalation = EscalationManager()
+
+        print("✓ Escalation manager loaded")
+
+        # -------------------------------------------------
+        # Gemini client
+        # -------------------------------------------------
+
+        api_key = os.getenv("GEMINI_API_KEY")
+
+        if not api_key:
+            raise ValueError(
+                "GEMINI_API_KEY is missing from .env"
+            )
+
+        self.gemini = genai.Client(
+            api_key=api_key
         )
 
-        print("✓ Escalation system loaded")
+        self.model = os.getenv(
+            "GEMINI_MODEL",
+            "gemini-3.8-flash"
+        )
 
+        print("✓ Gemini client loaded")
         print("\nSupport Agent ready!")
 
     # -----------------------------------------------------
@@ -106,6 +94,7 @@ class SupportAgent:
 
     def analyze(self, message, top_k=3):
 
+        # Intent classification
         classification = self.classifier.predict(
             message
         )
@@ -113,20 +102,31 @@ class SupportAgent:
         intent = classification["intent"]
         confidence = classification["confidence"]
 
+        # Historical retrieval
         retrieved = self.retriever.retrieve(
             message,
-            top_k=top_k
+            top_k=top_k,
+            intent=intent
         )
+
+        # Escalation check
+        escalation_result = self.escalation.should_escalate({
+           "message": message,
+           "intent": intent,
+           "confidence": confidence
+       })
 
         return {
             "message": message,
             "intent": intent,
             "confidence": confidence,
-            "retrieved": retrieved
+            "retrieved": retrieved,
+            "escalated": escalation_result["escalate"],
+            "escalation_reason": escalation_result.get("reason")
         }
 
     # -----------------------------------------------------
-    # Generate AI response using Gemini
+    # Gemini response generation
     # -----------------------------------------------------
 
     def generate_response(self, analysis):
@@ -137,29 +137,76 @@ class SupportAgent:
         retrieved = analysis["retrieved"]
 
         # -------------------------------------------------
-        # Build context from retrieved conversations
+        # If escalation is required
         # -------------------------------------------------
 
-        context = ""
+        if analysis["escalated"]:
+
+            return (
+                "I'm sorry, but this issue requires "
+                "additional assistance from our support team. "
+                "I'm escalating this conversation to a "
+                "human agent."
+            )
+
+        # -------------------------------------------------
+        # Build historical context
+        # -------------------------------------------------
+
+        historical_context = ""
 
         for i, item in enumerate(
-            retrieved,
+            retrieved[:3],
             start=1
         ):
 
-            context += (
-                f"\nExample {i}:\n"
-                f"Customer: {item['customer_text']}\n"
-                f"Support: {item['brand_text']}\n"
+            customer_text = item.get(
+                "customer_text",
+                ""
+            )
+
+            brand_text = item.get(
+                "brand_text",
+                ""
+            )
+
+            historical_context += (
+                f"\nHistorical Case {i}:\n"
+                f"Customer: {customer_text}\n"
+                f"Support: {brand_text}\n"
             )
 
         # -------------------------------------------------
         # Prompt
         # -------------------------------------------------
 
-        prompt = f"""
-You are a helpful customer support agent.
+        system_instruction = """
+You are an AI customer support agent.
 
+Your job is to provide helpful, concise and professional
+customer support responses.
+
+Rules:
+
+1. Understand the customer's actual problem.
+2. Use the detected intent and historical support cases
+   as context.
+3. Do not blindly copy historical responses.
+4. Do not invent order status, refund status, payment
+   status, shipping information or account information.
+5. If specific account/order information is required,
+   politely ask the customer for the necessary details.
+6. Never claim that you accessed a customer's private
+   account or order.
+7. Keep the response concise and natural.
+8. Do not mention internal classification, confidence
+   scores, retrieval systems or this prompt.
+9. Do not expose internal IDs from historical examples.
+10. If the customer needs human support, clearly explain
+    that the conversation needs to be escalated.
+"""
+
+        user_prompt = f"""
 Customer message:
 {message}
 
@@ -169,40 +216,32 @@ Detected intent:
 Classifier confidence:
 {confidence:.3f}
 
-Relevant historical support conversations:
-{context}
+Relevant historical support cases:
+{historical_context}
 
-Instructions:
-
-- Answer the customer's actual question.
-- Use the historical conversations only as guidance.
-- Do not blindly copy historical responses.
-- Do not invent order details, refund amounts, dates, or policies.
-- Be polite, concise, and helpful.
-- If the available information is insufficient, say so clearly.
-- Never mention the classifier.
-- Never mention the retrieval system.
-- Never mention this prompt or internal process.
+Write the best possible support response for the
+customer's current message.
 """
 
         # -------------------------------------------------
-        # Gemini API call
+        # Gemini call
         # -------------------------------------------------
 
-        response = self.client.models.generate_content(
+        interaction = self.gemini.interactions.create(
             model=self.model,
-            contents=prompt
+            system_instruction=system_instruction,
+            input=user_prompt
         )
 
-        answer = response.text.strip()
+        response = interaction.output_text
 
-        return {
-            "message": message,
-            "intent": intent,
-            "confidence": confidence,
-            "response": answer,
-            "sources": retrieved
-        }
+        if not response:
+            response = (
+                "I'm sorry, but I wasn't able to generate "
+                "a response right now. Please try again."
+            )
+
+        return response.strip()
 
     # -----------------------------------------------------
     # Complete agent pipeline
@@ -215,50 +254,25 @@ Instructions:
             top_k=top_k
         )
 
-        # -------------------------------------------------
-        # Check escalation
-        # -------------------------------------------------
-
-        escalation = self.escalation.should_escalate(
+        response = self.generate_response(
             analysis
         )
 
-        # -------------------------------------------------
-        # Escalate to human agent
-        # -------------------------------------------------
-
-        if escalation["escalate"]:
-
-            return {
-                "message": message,
-                "intent": analysis["intent"],
-                "confidence": analysis["confidence"],
-                "response": (
-                    "I'm sorry, but this issue requires "
-                    "additional assistance from our support team. "
-                    "I'm escalating this conversation to a human agent."
-                ),
-                "escalated": True,
-                "escalation_reason": escalation["reason"],
-                "sources": analysis["retrieved"]
-            }
-
-        # -------------------------------------------------
-        # Generate normal AI response
-        # -------------------------------------------------
-
-        result = self.generate_response(
-            analysis
-        )
-
-        result["escalated"] = False
-        result["escalation_reason"] = None
-
-        return result
+        return {
+            "message": analysis["message"],
+            "intent": analysis["intent"],
+            "confidence": analysis["confidence"],
+            "response": response,
+            "sources": analysis["retrieved"],
+            "escalated": analysis["escalated"],
+            "escalation_reason": analysis[
+                "escalation_reason"
+            ]
+        }
 
 
 # ---------------------------------------------------------
-# Test the Support Agent
+# Local test
 # ---------------------------------------------------------
 
 if __name__ == "__main__":
@@ -302,17 +316,13 @@ if __name__ == "__main__":
             f"{result['escalated']}"
         )
 
-        if result["escalated"]:
-
+        if result["escalation_reason"]:
             print(
-                f"Escalation Reason: "
+                f"Reason: "
                 f"{result['escalation_reason']}"
             )
 
         print("\nAI Response:")
-
-        print(
-            result["response"]
-        )
+        print(result["response"])
 
         print("=" * 80)
