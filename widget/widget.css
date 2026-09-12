@@ -1,0 +1,204 @@
+#hiver-ai-widget {
+    font-family: Arial, sans-serif;
+}
+
+#hiver-chat-button {
+    position: fixed;
+    right: 25px;
+    bottom: 25px;
+
+    width: 60px;
+    height: 60px;
+
+    border: none;
+    border-radius: 50%;
+
+    background: #111827;
+    color: white;
+
+    font-size: 25px;
+    cursor: pointer;
+
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+
+    z-index: 999999;
+}
+
+#hiver-chat-window {
+    position: fixed;
+
+    right: 25px;
+    bottom: 95px;
+
+    width: 360px;
+    height: 520px;
+
+    background: white;
+
+    border-radius: 18px;
+
+    box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.25);
+
+    display: none;
+    flex-direction: column;
+
+    overflow: hidden;
+
+    z-index: 999999;
+}
+
+
+/* Header */
+
+#hiver-chat-header {
+    height: 65px;
+
+    padding: 0 18px;
+
+    background: #111827;
+    color: white;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#hiver-chat-header strong {
+    display: block;
+    font-size: 16px;
+}
+
+#hiver-chat-header small {
+    display: block;
+    margin-top: 3px;
+    opacity: 0.75;
+}
+
+#hiver-chat-close {
+    border: none;
+    background: transparent;
+
+    color: white;
+
+    font-size: 25px;
+    cursor: pointer;
+}
+
+
+/* Messages */
+
+#hiver-chat-messages {
+    flex: 1;
+
+    padding: 18px;
+
+    overflow-y: auto;
+
+    background: #f9fafb;
+}
+
+.hiver-message {
+    max-width: 80%;
+
+    padding: 11px 14px;
+
+    margin-bottom: 12px;
+
+    border-radius: 14px;
+
+    font-size: 14px;
+
+    line-height: 1.4;
+}
+
+.hiver-bot-message {
+    background: white;
+
+    color: #111827;
+
+    border: 1px solid #e5e7eb;
+
+    margin-right: auto;
+}
+
+.hiver-user-message {
+    background: #111827;
+
+    color: white;
+
+    margin-left: auto;
+}
+
+
+/* Input */
+
+#hiver-chat-input-area {
+    display: flex;
+
+    padding: 12px;
+
+    border-top: 1px solid #e5e7eb;
+
+    background: white;
+}
+
+#hiver-chat-input {
+    flex: 1;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 10px;
+
+    padding: 11px;
+
+    outline: none;
+
+    font-size: 14px;
+}
+
+#hiver-chat-input:focus {
+    border-color: #111827;
+}
+
+#hiver-chat-send {
+    width: 45px;
+
+    margin-left: 8px;
+
+    border: none;
+
+    border-radius: 10px;
+
+    background: #111827;
+
+    color: white;
+
+    cursor: pointer;
+
+    font-size: 18px;
+}
+
+#hiver-chat-send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
+/* Mobile */
+
+@media (max-width: 500px) {
+
+    #hiver-chat-window {
+        right: 10px;
+        bottom: 80px;
+
+        width: calc(100% - 20px);
+        height: 70vh;
+    }
+
+    #hiver-chat-button {
+        right: 15px;
+        bottom: 15px;
+    }
+}

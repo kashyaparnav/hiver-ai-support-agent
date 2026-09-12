@@ -11,3 +11,6 @@ seaborn
 jupyter
 streamlit
 google-genai
+fastapi
+uvicorn
+pydantic
