@@ -1,5 +1,5 @@
 (() => {
-    const API_URL = "http://127.0.0.1:8000/api/chat";
+    const API_URL = "https://hiver-ai-support-agent-r2d7.onrender.com/api/chat";
 
     // =========================
     // Inject CSS
