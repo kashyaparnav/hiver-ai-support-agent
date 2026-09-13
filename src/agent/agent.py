@@ -90,10 +90,7 @@ class SupportAgent:
             api_key=api_key
         )
 
-        self.model = os.getenv(
-            "GEMINI_MODEL",
-            "gemini-3.8-flash"
-        )
+        self.model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
         print("✓ Gemini client loaded")
         print("\nSupport Agent ready!")
